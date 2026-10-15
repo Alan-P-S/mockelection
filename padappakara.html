@@ -293,7 +293,7 @@ main {
 
 <script>
 const API_BASE = "https://letbackend.onrender.com/api/election";
-let adminKey = "";
+let adminKey = "secretcetAdmin";
 
 const $ = id => document.getElementById(id);
 
@@ -322,7 +322,7 @@ $("loginForm").addEventListener("submit", async event => {
   const enteredKey = $("adminKey").value;
 
   // Frontend-only demo gate, not real authentication.
-  if (enteredKey !== "secretcetAdmin") {
+  if (enteredKey !== "padappakkara@14#") {
     $("loginError").textContent = "Incorrect admin key.";
     return;
   }

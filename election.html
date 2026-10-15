@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Mock Election</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --surface: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --line: #e5e9f2;
+      --primary: #303640;
+      --primary-dark: #1f252d;
+      --sfi: #c62828;
+      --ksu: #1769aa;
+      --fraternity: #7b3fb2;
+      --success: #16794b;
+      --shadow: 0 12px 32px rgba(28, 34, 45, .08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+    .hero {
+      background: linear-gradient(115deg, #fff8f7 0%, #ffffff 48%, #f8f3fc 100%);
+      color: var(--text);
+      border-bottom: 1px solid #e9e5eb;
+      padding: 36px 20px 58px;
+    }
+    .hero-inner, main { width: min(1080px, calc(100% - 32px)); margin: 0 auto; }
+    .topline {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 28px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .2px; }
+    .brand-mark {
+      display: grid; place-items: center; width: 38px; height: 38px;
+      border-radius: 12px; background: #303640; color: #fff; font-size: 21px;
+    }
+    .demo-tag {
+      border: 1px solid #d8dce4; border-radius: 999px;
+      padding: 6px 11px; font-size: 12px; font-weight: 750; letter-spacing: .7px;
+      color: #3d4654; background: #fff;
+    }
+    h1 { margin: 0; font-size: clamp(30px, 5vw, 46px); line-height: 1.1; letter-spacing: -1.2px; }
+    .hero p { max-width: 650px; color: #596273; margin: 13px 0 0; font-size: 16px; }
+    .party-strip { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+    .party-chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 999px; background: white; border: 1px solid var(--line); font-size: 12px; font-weight: 800; color: #303640; }
+    .party-chip::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--chip-color); }
+    main { margin-top: -28px; padding-bottom: 48px; }
+    .notice {
+      display: flex; gap: 12px; align-items: flex-start; background: #fff8e6;
+      border: 1px solid #f2dfaa; color: #684d08; border-radius: 14px;
+      padding: 14px 16px; margin-bottom: 22px; font-size: 14px;
+    }
+    .notice strong { display: block; margin-bottom: 2px; }
+    .toolbar {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      flex-wrap: wrap; margin: 20px 0 14px;
+    }
+    .toolbar h2 { margin: 0; font-size: 22px; letter-spacing: -.4px; }
+    .progress-text { color: var(--muted); font-size: 13px; font-weight: 650; }
+    .progress-track { height: 7px; background: #e1e5f0; border-radius: 999px; overflow: hidden; margin-bottom: 22px; }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--sfi) 0%, var(--ksu) 50%, var(--fraternity) 100%); border-radius: 999px; transition: width .2s ease; }
+    .positions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .position-card {
+      background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+      padding: 20px; box-shadow: var(--shadow); min-width: 0;
+    }
+    .position-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+    .position-head h3 { margin: 0; font-size: 17px; }
+    .position-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .required { font-size: 11px; color: #7b8498; white-space: nowrap; }
+    .candidate {
+      display: flex; align-items: center; gap: 12px; border: 1px solid var(--line);
+      border-radius: 13px; padding: 12px; margin-top: 9px; cursor: pointer;
+      transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    }
+    .candidate:hover { border-color: #aab4f0; transform: translateY(-1px); }
+    .candidate:has(input:checked) { border-color: var(--party-color, var(--primary)); background: var(--selected-bg, #f5f6f8); box-shadow: 0 0 0 1px var(--party-color, var(--primary)) inset; }
+    .candidate input { width: 17px; height: 17px; accent-color: var(--primary); flex: 0 0 auto; }
+    .avatar {
+      width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+      font-size: 13px; font-weight: 800; flex: 0 0 auto; background: #eef0f3; color: #303640;
+    }
+    .candidate:has(.party.sfi) .avatar { background: #ffebea; color: var(--sfi); }
+    .candidate:has(.party.ksu) .avatar { background: #e7f2ff; color: var(--ksu); }
+    .candidate:has(.party.fraternity) .avatar { background: #f0e4fb; color: var(--fraternity); }
+    .candidate-info { min-width: 0; flex: 1; }
+    .candidate-name { display: block; font-weight: 750; font-size: 14px; overflow-wrap: anywhere; }
+    .party { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; font-weight: 800; letter-spacing: .3px; }
+    .party::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .party.fraternity { color: var(--fraternity); }
+    .party.sfi { color: var(--sfi); }
+    .party.ksu { color: var(--ksu); }
+    .party.fraternity { color: var(--fraternity); }
+    .candidate:has(.party.sfi) { --party-color: var(--sfi); --selected-bg: #fff3f2; }
+    .candidate:has(.party.ksu) { --party-color: var(--ksu); --selected-bg: #f0f7ff; }
+    .candidate:has(.party.fraternity) { --party-color: var(--fraternity); --selected-bg: #f8f1ff; }
+    .empty-note { color: var(--muted); font-size: 13px; background: #f8f9fc; border-radius: 10px; padding: 12px; }
+    .submit-panel {
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      margin-top: 22px; padding: 20px; background: white; border: 1px solid var(--line);
+      border-radius: 18px; box-shadow: var(--shadow);
+    }
+    .submit-panel h3 { margin: 0; font-size: 16px; }
+    .submit-panel p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    button {
+      border: 0; border-radius: 12px; padding: 13px 20px; font: inherit; font-weight: 800;
+      cursor: pointer; transition: background .15s ease, transform .15s ease;
+    }
+    button:active { transform: scale(.98); }
+    .submit-btn { background: var(--primary); color: white; white-space: nowrap; }
+    .submit-btn:hover { background: var(--primary-dark); }
+    .submit-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .reset-btn { color: #344054; background: #eef0f6; padding: 10px 14px; font-size: 13px; }
+    .status {
+      display: none; margin-top: 18px; border: 1px solid #a9dfc4; background: #effbf4;
+      color: #155c3b; border-radius: 14px; padding: 16px;
+    }
+    .status.show { display: block; }
+    .status strong { display: block; margin-bottom: 3px; }
+    .footer { text-align: center; color: #7a8497; font-size: 12px; margin-top: 24px; }
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(13, 20, 44, .58);
+      z-index: 10; align-items: center; justify-content: center; padding: 18px;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      width: min(440px, 100%); background: white; border-radius: 20px; padding: 26px;
+      box-shadow: 0 24px 70px rgba(0,0,0,.25);
+    }
+    .modal-icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 15px; background: #eaf8ef; color: var(--success); font-size: 24px; }
+    .modal h2 { margin: 16px 0 7px; font-size: 23px; }
+    .modal p { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+    .confirm-btn { background: var(--primary); color: white; }
+    @media (max-width: 720px) {
+      .positions { grid-template-columns: 1fr; }
+      .hero { padding-top: 26px; }
+      .submit-panel { align-items: stretch; flex-direction: column; }
+      .submit-btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark">✓</span><span>Campus Ballot</span></div>
+        <span class="demo-tag">MOCK ELECTION · DEMO</span>
+      </div>
+      <h1>Your vote. Your campus.</h1>
+      <p>Three parties. One campus. Choose your candidate for each available post and review your selections before submitting your mock ballot.</p>
+      <div class="party-strip" aria-label="Participating parties">
+        <span class="party-chip" style="--chip-color: var(--sfi)">SFI</span>
+        <span class="party-chip" style="--chip-color: var(--ksu)">KSU</span>
+        <span class="party-chip" style="--chip-color: var(--fraternity)">Fraternity</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="notice">
+      <span aria-hidden="true">ⓘ</span>
+      <div><strong>Frontend demonstration only</strong>Candidates are loaded from your backend and votes are submitted to it. Election results are not displayed on this page.</div>
+    </div>
+
+    <section aria-labelledby="ballot-heading">
+      <div class="toolbar">
+        <h2 id="ballot-heading">Election ballot</h2>
+        <span class="progress-text" id="progressText">0 of 8 posts selected</span>
+      </div>
+      <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+      <form id="ballotForm">
+        <div class="positions" id="positions"></div>
+        <div class="submit-panel">
+          <div>
+            <h3>Ready to submit?</h3>
+            <p id="submitHint">Select one candidate for every post to continue.</p>
+          </div>
+          <button class="submit-btn" id="submitBtn" type="submit" disabled>Review my ballot →</button>
+        </div>
+      </form>
+      <div class="status" id="statusMessage" role="status" aria-live="polite">
+        <strong>Demo ballot submitted successfully.</strong>
+        Your selections were processed in this page only. No vote was sent to a server, and no results are displayed.
+      </div>
+      <div class="footer">Campus Ballot • Mock election interface • Results are not shown here</div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="reviewModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-icon">✓</div>
+      <h2 id="modalTitle">Confirm your ballot</h2>
+      <p id="reviewSummary">You are about to submit your selections.</p>
+      <div class="modal-actions">
+        <button class="reset-btn" type="button" id="editBtn">Go back</button>
+        <button class="confirm-btn" type="button" id="confirmBtn">Confirm mock vote</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "https://letbackend.onrender.com/api/election";
+    let posts = [];
+    let isSubmitting = false;
+    const positionsEl = document.getElementById("positions");
+    const progressText = document.getElementById("progressText");
+    const progressFill = document.getElementById("progressFill");
+    const submitBtn = document.getElementById("submitBtn");
+    const submitHint = document.getElementById("submitHint");
+    const modal = document.getElementById("reviewModal");
+    const reviewSummary = document.getElementById("reviewSummary");
+    const statusMessage = document.getElementById("statusMessage");
+
+    function initials(name) {
+      return name.trim().split(/\\s+/).slice(0, 2).map(p => p[0]).join("").toUpperCase();
+    }
+    function showStatus(message, error = false) {
+      statusMessage.classList.add("show");
+      statusMessage.style.background = error ? "#fff0f0" : "#effbf4";
+      statusMessage.style.borderColor = error ? "#efb1b1" : "#a9dfc4";
+      statusMessage.style.color = error ? "#a32020" : "#155c3b";
+      statusMessage.replaceChildren();
+      const heading = document.createElement("strong");
+      heading.textContent = error ? "Something went wrong" : "Ballot submitted";
+      const detail = document.createElement("span");
+      detail.textContent = message;
+      statusMessage.append(heading, detail);
+      statusMessage.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    function getSelections() {
+      return posts.map(post => {
+        const input = document.querySelector(`input[name="post-${post.id}"]:checked`);
+        return input ? { positionId: post.id, candidateId: Number(input.value) } : null;
+      }).filter(Boolean);
+    }
+    function renderBallot() {
+      positionsEl.replaceChildren();
+      for (const [index, post] of posts.entries()) {
+        const card = document.createElement("article");
+        card.className = "position-card";
+        const header = document.createElement("div");
+        header.className = "position-head";
+        const titleWrap = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = post.name;
+        const subtitle = document.createElement("p");
+        subtitle.textContent = "Choose one candidate";
+        titleWrap.append(title, subtitle);
+        const number = document.createElement("span");
+        number.className = "required";
+        number.textContent = `POST ${String(index + 1).padStart(2, "0")}`;
+        header.append(titleWrap, number);
+        card.append(header);
+        for (const candidate of post.Candidates || []) {
+          const partyName = candidate.Party?.name || "Independent";
+          const partyClass = ["SFI", "KSU", "Fraternity"].includes(partyName)
+            ? partyName.toLowerCase() : "";
+          const label = document.createElement("label");
+          label.className = "candidate";
+          const radio = document.createElement("input");
+          radio.type = "radio";
+          radio.name = `post-${post.id}`;
+          radio.value = candidate.id;
+          radio.setAttribute("aria-label", `${candidate.name}, ${partyName}`);
+          const avatar = document.createElement("span");
+          avatar.className = "avatar";
+          avatar.setAttribute("aria-hidden", "true");
+          avatar.textContent = initials(candidate.name);
+          const info = document.createElement("span");
+          info.className = "candidate-info";
+          const name = document.createElement("span");
+          name.className = "candidate-name";
+          name.textContent = candidate.name;
+          const party = document.createElement("span");
+          party.className = `party ${partyClass}`;
+          party.textContent = partyName;
+          info.append(name, party);
+          label.append(radio, avatar, info);
+          card.append(label);
+        }
+        positionsEl.append(card);
+      }
+      updateProgress();
+    }
+    function updateProgress() {
+      const count = getSelections().length;
+      progressText.textContent = `${count} of ${posts.length} posts selected`;
+      progressFill.style.width = posts.length ? `${count / posts.length * 100}%` : "0%";
+      submitBtn.disabled = isSubmitting || !posts.length || count !== posts.length;
+      submitHint.textContent = !posts.length ? "Loading candidates..."
+        : count === posts.length ? "All posts selected. Review your ballot."
+        : `Select ${posts.length - count} more ${posts.length - count === 1 ? "post" : "posts"} to continue.`;
+    }
+    async function loadBallot() {
+      try {
+        const response = await fetch(`${API_BASE}/ballot`);
+        if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+        const data = await response.json();
+        if (!Array.isArray(data.positions)) throw new Error("Invalid ballot response");
+        posts = data.positions;
+        renderBallot();
+      } catch (error) {
+        submitHint.textContent = "Could not load candidates.";
+        showStatus(`Unable to load ballot: ${error.message}. Check the API and CORS settings.`, true);
+      }
+    }
+    positionsEl.addEventListener("change", updateProgress);
+    document.getElementById("ballotForm").addEventListener("submit", event => {
+      event.preventDefault();
+      if (getSelections().length !== posts.length || isSubmitting) return;
+      reviewSummary.textContent = `You selected candidates for all ${posts.length} posts. Confirm to submit your ballot.`;
+      modal.classList.add("show");
+      document.getElementById("confirmBtn").focus();
+    });
+    document.getElementById("editBtn").addEventListener("click", () => {
+      modal.classList.remove("show");
+      submitBtn.focus();
+    });
+    document.getElementById("confirmBtn").addEventListener("click", async () => {
+      if (isSubmitting) return;
+      const selections = getSelections();
+      if (selections.length !== posts.length) return;
+      isSubmitting = true;
+      const confirm = document.getElementById("confirmBtn");
+      confirm.disabled = true;
+      confirm.textContent = "Submitting...";
+      updateProgress();
+      try {
+        const response = await fetch(`${API_BASE}/votes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selections })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.message || `HTTP ${response.status}`);
+        modal.classList.remove("show");
+        document.querySelectorAll("#ballotForm input").forEach(input => input.disabled = true);
+        submitBtn.textContent = "Ballot submitted ✓";
+        submitHint.textContent = "Your selections were sent to the server.";
+        showStatus(result.message || "Your ballot was recorded. Results are not displayed here.");
+      } catch (error) {
+        modal.classList.remove("show");
+        showStatus(`Your ballot could not be submitted: ${error.message}`, true);
+      } finally {
+        isSubmitting = false;
+        confirm.disabled = false;
+        confirm.textContent = "Confirm mock vote";
+        if (!document.querySelector("#ballotForm input:disabled")) updateProgress();
+      }
+    });
+    modal.addEventListener("click", event => {
+      if (event.target === modal && !isSubmitting) modal.classList.remove("show");
+    });
+    loadBallot();
+  </script>
+</body>
+</html>

@@ -169,7 +169,7 @@
   <main>
     <div class="notice">
       <span aria-hidden="true">ⓘ</span>
-      <div><strong>Frontend demonstration only</strong>This page does not save votes to a server and does not show election results. Connect the submit action to a backend API for real vote storage and counting.</div>
+      <div><strong>Frontend demonstration only</strong>Candidates are loaded from your backend and votes are submitted to it. Election results are not displayed on this page.</div>
     </div>
 
     <section aria-labelledby="ballot-heading">
@@ -192,7 +192,7 @@
         <strong>Demo ballot submitted successfully.</strong>
         Your selections were processed in this page only. No vote was sent to a server, and no results are displayed.
       </div>
-      <div class="footer">Campus Ballot • Mock election interface • No real votes are recorded</div>
+      <div class="footer">Campus Ballot • Mock election interface • Results are not shown here</div>
     </section>
   </main>
 
@@ -209,70 +209,9 @@
   </div>
 
   <script>
-    const posts = [
-      {
-        id: "chairperson", title: "Chairperson",
-        candidates: [
-          { name: "Ephrem Mathews", party: "KSU" },
-          { name: "Nandana P", party: "SFI" },
-          { name: "Ramadan Anes V", party: "Fraternity" }
-        ]
-      },
-      {
-        id: "vice-chairperson", title: "Vice Chairperson",
-        candidates: [
-          { name: "Sheba Fathima", party: "KSU" },
-          { name: "Arya R", party: "SFI" }
-        ]
-      },
-      {
-        id: "general-secretary", title: "General Secretary",
-        candidates: [
-          { name: "Muhammed Yamin Beck", party: "KSU" },
-          { name: "Sandeep Santhosh", party: "SFI" },
-          { name: "Inayath Illyas", party: "Fraternity" }
-        ]
-      },
-      {
-        id: "arts-club-secretary", title: "Arts Club Secretary",
-        candidates: [
-          { name: "Guatham KJ", party: "KSU" },
-          { name: "Rahul R", party: "SFI" },
-          { name: "Hanan Ayyoobi K P", party: "Fraternity" }
-        ]
-      },
-      {
-        id: "union-councillor", title: "University Union Councillor",
-        candidates: [
-          { name: "Blesson Mathew", party: "KSU" },
-          { name: "Sisira Thomas", party: "SFI" }
-        ]
-      },
-      {
-        id: "lady-representative", title: "Lady Representative",
-        candidates: [
-          { name: "Ashitha A", party: "KSU" },
-          { name: "Pallavi Jayachandran", party: "KSU" },
-          { name: "Adithya E K", party: "SFI" },
-          { name: "Keerthana Jagan", party: "SFI" },
-          { name: "Amna Anan M M", party: "Fraternity" }
-        ]
-      },
-      {
-        id: "magazine-editor", title: "Magazine Editor",
-        candidates: [
-          { name: "Abja Sasikumar", party: "SFI" }
-        ]
-      },
-      {
-        id: "union-chairperson", title: "University Union Chairperson",
-        candidates: [
-          { name: "Aravind V G", party: "SFI" },
-          { name: "Naseeh Ameen", party: "Fraternity" }
-        ]
-      }
-    ];
-
+    const API_BASE = "https://letbackend.onrender.com/api/election";
+    let posts = [];
+    let isSubmitting = false;
     const positionsEl = document.getElementById("positions");
     const progressText = document.getElementById("progressText");
     const progressFill = document.getElementById("progressFill");
@@ -283,87 +222,146 @@
     const statusMessage = document.getElementById("statusMessage");
 
     function initials(name) {
-      return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase();
+      return name.trim().split(/\\s+/).slice(0, 2).map(p => p[0]).join("").toUpperCase();
     }
-
-    function renderBallot() {
-      positionsEl.innerHTML = posts.map((post, index) => `
-        <article class="position-card">
-          <div class="position-head">
-            <div>
-              <h3>${post.title}</h3>
-              <p>Choose one candidate</p>
-            </div>
-            <span class="required">POST ${String(index + 1).padStart(2, "0")}</span>
-          </div>
-          ${post.candidates.map((candidate, candidateIndex) => {
-            const inputId = `${post.id}-${candidateIndex}`;
-            return `
-              <label class="candidate" for="${inputId}">
-                <input id="${inputId}" type="radio" name="${post.id}" value="${candidate.name}" />
-                <span class="avatar" aria-hidden="true">${initials(candidate.name)}</span>
-                <span class="candidate-info">
-                  <span class="candidate-name">${candidate.name}</span>
-                  <span class="party ${candidate.party.toLowerCase()}">${candidate.party}</span>
-                </span>
-              </label>
-            `;
-          }).join("")}
-        </article>
-      `).join("");
+    function showStatus(message, error = false) {
+      statusMessage.classList.add("show");
+      statusMessage.style.background = error ? "#fff0f0" : "#effbf4";
+      statusMessage.style.borderColor = error ? "#efb1b1" : "#a9dfc4";
+      statusMessage.style.color = error ? "#a32020" : "#155c3b";
+      statusMessage.replaceChildren();
+      const heading = document.createElement("strong");
+      heading.textContent = error ? "Something went wrong" : "Ballot submitted";
+      const detail = document.createElement("span");
+      detail.textContent = message;
+      statusMessage.append(heading, detail);
+      statusMessage.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-
     function getSelections() {
       return posts.map(post => {
-        const selected = document.querySelector(`input[name="${post.id}"]:checked`);
-        if (!selected) return null;
-        return { post: post.title, candidate: selected.value };
+        const input = document.querySelector(`input[name="post-${post.id}"]:checked`);
+        return input ? { positionId: post.id, candidateId: Number(input.value) } : null;
       }).filter(Boolean);
     }
-
+    function renderBallot() {
+      positionsEl.replaceChildren();
+      for (const [index, post] of posts.entries()) {
+        const card = document.createElement("article");
+        card.className = "position-card";
+        const header = document.createElement("div");
+        header.className = "position-head";
+        const titleWrap = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = post.name;
+        const subtitle = document.createElement("p");
+        subtitle.textContent = "Choose one candidate";
+        titleWrap.append(title, subtitle);
+        const number = document.createElement("span");
+        number.className = "required";
+        number.textContent = `POST ${String(index + 1).padStart(2, "0")}`;
+        header.append(titleWrap, number);
+        card.append(header);
+        for (const candidate of post.Candidates || []) {
+          const partyName = candidate.Party?.name || "Independent";
+          const partyClass = ["SFI", "KSU", "Fraternity"].includes(partyName)
+            ? partyName.toLowerCase() : "";
+          const label = document.createElement("label");
+          label.className = "candidate";
+          const radio = document.createElement("input");
+          radio.type = "radio";
+          radio.name = `post-${post.id}`;
+          radio.value = candidate.id;
+          radio.setAttribute("aria-label", `${candidate.name}, ${partyName}`);
+          const avatar = document.createElement("span");
+          avatar.className = "avatar";
+          avatar.setAttribute("aria-hidden", "true");
+          avatar.textContent = initials(candidate.name);
+          const info = document.createElement("span");
+          info.className = "candidate-info";
+          const name = document.createElement("span");
+          name.className = "candidate-name";
+          name.textContent = candidate.name;
+          const party = document.createElement("span");
+          party.className = `party ${partyClass}`;
+          party.textContent = partyName;
+          info.append(name, party);
+          label.append(radio, avatar, info);
+          card.append(label);
+        }
+        positionsEl.append(card);
+      }
+      updateProgress();
+    }
     function updateProgress() {
       const count = getSelections().length;
       progressText.textContent = `${count} of ${posts.length} posts selected`;
-      progressFill.style.width = `${(count / posts.length) * 100}%`;
-      submitBtn.disabled = count !== posts.length;
-      submitHint.textContent = count === posts.length
-        ? "All posts have a selection. You can review your ballot now."
+      progressFill.style.width = posts.length ? `${count / posts.length * 100}%` : "0%";
+      submitBtn.disabled = isSubmitting || !posts.length || count !== posts.length;
+      submitHint.textContent = !posts.length ? "Loading candidates..."
+        : count === posts.length ? "All posts selected. Review your ballot."
         : `Select ${posts.length - count} more ${posts.length - count === 1 ? "post" : "posts"} to continue.`;
     }
-
+    async function loadBallot() {
+      try {
+        const response = await fetch(`${API_BASE}/ballot`);
+        if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+        const data = await response.json();
+        if (!Array.isArray(data.positions)) throw new Error("Invalid ballot response");
+        posts = data.positions;
+        renderBallot();
+      } catch (error) {
+        submitHint.textContent = "Could not load candidates.";
+        showStatus(`Unable to load ballot: ${error.message}. Check the API and CORS settings.`, true);
+      }
+    }
     positionsEl.addEventListener("change", updateProgress);
-
     document.getElementById("ballotForm").addEventListener("submit", event => {
       event.preventDefault();
-      const selections = getSelections();
-      if (selections.length !== posts.length) return;
-      reviewSummary.textContent = `You have selected candidates for all ${posts.length} posts. Confirm to finish this frontend-only demo.`;
+      if (getSelections().length !== posts.length || isSubmitting) return;
+      reviewSummary.textContent = `You selected candidates for all ${posts.length} posts. Confirm to submit your ballot.`;
       modal.classList.add("show");
       document.getElementById("confirmBtn").focus();
     });
-
     document.getElementById("editBtn").addEventListener("click", () => {
       modal.classList.remove("show");
       submitBtn.focus();
     });
-
-    document.getElementById("confirmBtn").addEventListener("click", () => {
-      // Demo only: no network request, persistent storage, or result display.
-      modal.classList.remove("show");
-      statusMessage.classList.add("show");
-      statusMessage.scrollIntoView({ behavior: "smooth", block: "center" });
-      document.querySelectorAll("#ballotForm input").forEach(input => input.disabled = true);
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Mock ballot submitted ✓";
-      submitHint.textContent = "This demo ballot is complete. Refresh the page to try again.";
+    document.getElementById("confirmBtn").addEventListener("click", async () => {
+      if (isSubmitting) return;
+      const selections = getSelections();
+      if (selections.length !== posts.length) return;
+      isSubmitting = true;
+      const confirm = document.getElementById("confirmBtn");
+      confirm.disabled = true;
+      confirm.textContent = "Submitting...";
+      updateProgress();
+      try {
+        const response = await fetch(`${API_BASE}/votes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selections })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.message || `HTTP ${response.status}`);
+        modal.classList.remove("show");
+        document.querySelectorAll("#ballotForm input").forEach(input => input.disabled = true);
+        submitBtn.textContent = "Ballot submitted ✓";
+        submitHint.textContent = "Your selections were sent to the server.";
+        showStatus(result.message || "Your ballot was recorded. Results are not displayed here.");
+      } catch (error) {
+        modal.classList.remove("show");
+        showStatus(`Your ballot could not be submitted: ${error.message}`, true);
+      } finally {
+        isSubmitting = false;
+        confirm.disabled = false;
+        confirm.textContent = "Confirm mock vote";
+        if (!document.querySelector("#ballotForm input:disabled")) updateProgress();
+      }
     });
-
     modal.addEventListener("click", event => {
-      if (event.target === modal) modal.classList.remove("show");
+      if (event.target === modal && !isSubmitting) modal.classList.remove("show");
     });
-
-    renderBallot();
-    updateProgress();
+    loadBallot();
   </script>
 </body>
 </html>

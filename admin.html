@@ -1,0 +1,582 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CET Election Admin</title>
+
+<style>
+:root {
+  --bg: #0b1020;
+  --panel: #151e32;
+  --border: #2b3852;
+  --text: #f3f6ff;
+  --muted: #9eacc5;
+  --accent: #8b5cf6;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top right, #25204b, var(--bg) 48%);
+  min-height: 100vh;
+}
+button, input { font: inherit; }
+button {
+  border: 0;
+  border-radius: 9px;
+  padding: 12px 16px;
+  background: var(--accent);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.12); }
+button:disabled { opacity: .55; cursor: wait; }
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 7px 0 15px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #0c1427;
+  color: white;
+  outline: none;
+}
+input:focus { border-color: var(--accent); }
+label {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+h1, h2, h3, p { margin-top: 0; }
+.muted { color: var(--muted); }
+
+.login-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 28px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px #0004;
+}
+.logo { font-size: 30px; margin-bottom: 18px; }
+.full { width: 100%; }
+.error { color: #ff8999; font-size: 13px; min-height: 18px; }
+.success { color: #72e3b0; font-size: 13px; min-height: 18px; }
+
+#dashboard { display: none; }
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 20px clamp(16px, 4vw, 45px);
+  border-bottom: 1px solid var(--border);
+  background: #0b1020d9;
+}
+header h1 { font-size: 19px; margin: 0 0 5px; }
+header small { color: var(--muted); }
+
+main {
+  max-width: 1200px;
+  margin: auto;
+  padding: 28px 18px 60px;
+}
+.page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.page-heading h2 { margin-bottom: 7px; }
+.secondary { background: #2b3852; }
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 22px;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  padding: 20px;
+  min-width: 0;
+}
+.stat-label { color: var(--muted); font-size: 13px; }
+.stat-value { font-size: 30px; font-weight: 800; margin-top: 12px; }
+
+.layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.forms { display: grid; gap: 16px; }
+.panel h3 { font-size: 17px; margin-bottom: 18px; }
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.section-heading h2 { font-size: 19px; margin: 0; }
+.results { display: grid; gap: 15px; }
+
+.position-title { font-size: 16px; margin-bottom: 17px; }
+.candidate { margin: 15px 0; }
+.candidate-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.party-name { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.bar { height: 8px; background: #2b3852; border-radius: 99px; overflow: hidden; }
+.fill { height: 100%; border-radius: 99px; }
+.pill {
+  background: #26334b;
+  color: #cbd5e1;
+  border-radius: 99px;
+  padding: 5px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.empty { color: var(--muted); text-align: center; padding: 24px 0; }
+#status { color: var(--muted); font-size: 13px; margin-top: 14px; }
+
+@media(max-width: 800px) {
+  .layout, .stats { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<section class="login-wrap" id="loginScreen">
+  <form class="login-card" id="loginForm">
+    <div class="logo">🔐</div>
+    <h1>Election Admin</h1>
+    <p class="muted">Sign in to manage the campus mock election.</p>
+
+    <label for="adminKey">Admin key</label>
+    <input id="adminKey" type="password"
+           placeholder="Enter admin key" autocomplete="current-password" required>
+
+    <button class="full" type="submit">Unlock dashboard →</button>
+    <p class="error" id="loginError" role="alert"></p>
+    <small class="muted">Campus mock election administration</small>
+  </form>
+</section>
+
+<!-- DASHBOARD -->
+<section id="dashboard">
+  <header>
+    <div>
+      <h1>🗳️ CET Election Admin</h1>
+      <small>Election management dashboard</small>
+    </div>
+    <button class="secondary" id="logoutBtn">Log out</button>
+  </header>
+
+  <main>
+    <div class="page-heading">
+      <div>
+        <h2>Election overview</h2>
+        <p class="muted">Manage parties, positions, candidates and results.</p>
+      </div>
+      <button class="secondary" id="refreshBtn">↻ Refresh results</button>
+    </div>
+
+    <div class="stats">
+      <div class="panel">
+        <div class="stat-label">Total votes</div>
+        <div class="stat-value" id="totalVotes">—</div>
+      </div>
+      <div class="panel">
+        <div class="stat-label">Positions</div>
+        <div class="stat-value" id="totalPositions">—</div>
+      </div>
+      <div class="panel">
+        <div class="stat-label">Candidates</div>
+        <div class="stat-value" id="totalCandidates">—</div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="forms">
+
+        <!-- ADD PARTY -->
+        <form class="panel" id="partyForm">
+          <h3>➕ Add party</h3>
+
+          <label for="partyName">Party name</label>
+          <input id="partyName" placeholder="e.g. SFI" required>
+
+          <label for="partyColor">Party color</label>
+          <input id="partyColor" type="color" value="#C62828" required>
+
+          <button class="full" type="submit">Save party</button>
+          <p class="error" id="partyError"></p>
+          <p class="success" id="partySuccess"></p>
+        </form>
+
+        <!-- ADD POSITION -->
+        <form class="panel" id="positionForm">
+          <h3>➕ Add position</h3>
+
+          <label for="positionName">Position name</label>
+          <input id="positionName" placeholder="e.g. Chairperson" required>
+
+          <label for="positionOrder">Display order</label>
+          <input id="positionOrder" type="number" min="0" value="1" required>
+
+          <button class="full" type="submit">Save position</button>
+          <p class="error" id="positionError"></p>
+          <p class="success" id="positionSuccess"></p>
+        </form>
+
+        <!-- ADD CANDIDATE -->
+        <form class="panel" id="candidateForm">
+          <h3>➕ Add candidate</h3>
+
+          <label for="candidateName">Candidate name</label>
+          <input id="candidateName" placeholder="Full name" required>
+
+          <label for="candidateParty">Party ID</label>
+          <input id="candidateParty" type="number" min="1"
+                 placeholder="Enter party ID" required>
+
+          <label for="candidatePosition">Position ID</label>
+          <input id="candidatePosition" type="number" min="1"
+                 placeholder="Enter position ID" required>
+
+          <button class="full" type="submit">Save candidate</button>
+          <p class="error" id="candidateError"></p>
+          <p class="success" id="candidateSuccess"></p>
+        </form>
+
+      </div>
+
+      <!-- RESULTS -->
+      <section class="panel">
+        <div class="section-heading">
+          <h2>Candidate results</h2>
+          <span class="pill" id="resultStatus">Not loaded</span>
+        </div>
+
+        <div id="results" class="results">
+          <div class="empty">Results will appear here.</div>
+        </div>
+
+        <p id="status"></p>
+      </section>
+    </div>
+  </main>
+</section>
+
+<script>
+const API_BASE = "https://letbackend.onrender.com/api/election";
+let adminKey = "";
+
+const $ = id => document.getElementById(id);
+
+const partyColors = {
+  SFI: "#C62828",
+  KSU: "#1769AA",
+  Fraternity: "#7B3FB2"
+};
+
+/*
+  IMPORTANT:
+  This assumes adminOnly checks the x-admin-key header.
+  The server must validate the key independently.
+*/
+function adminHeaders(json = false) {
+  return {
+    "x-admin-key": adminKey,
+    ...(json ? { "Content-Type": "application/json" } : {})
+  };
+}
+
+// LOGIN
+$("loginForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const enteredKey = $("adminKey").value;
+
+  // Frontend-only demo gate, not real authentication.
+  if (enteredKey !== "secretcetAdmin") {
+    $("loginError").textContent = "Incorrect admin key.";
+    return;
+  }
+
+  adminKey = enteredKey;
+  $("loginError").textContent = "";
+  $("loginScreen").style.display = "none";
+  $("dashboard").style.display = "block";
+
+  await loadResults();
+});
+
+// LOGOUT
+$("logoutBtn").addEventListener("click", () => {
+  adminKey = "";
+  $("adminKey").value = "";
+  $("dashboard").style.display = "none";
+  $("loginScreen").style.display = "grid";
+  $("results").replaceChildren();
+  $("resultStatus").textContent = "Not loaded";
+});
+
+// POST HELPER
+async function postData(path, body) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: adminHeaders(true),
+    body: JSON.stringify(body)
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || `Request failed (${response.status})`);
+  }
+
+  return data;
+}
+
+function showMessage(prefix, message, success = false) {
+  $(`${prefix}Error`).textContent = success ? "" : message;
+  $(`${prefix}Success`).textContent = success ? message : "";
+}
+
+// ADD PARTY
+$("partyForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  showMessage("party", "");
+
+  try {
+    const data = await postData("/parties", {
+      name: $("partyName").value.trim(),
+      color: $("partyColor").value
+    });
+
+    showMessage("party", data.message || "Party created successfully.", true);
+    $("partyForm").reset();
+    $("partyColor").value = "#C62828";
+  } catch (error) {
+    showMessage("party", error.message);
+  }
+});
+
+// ADD POSITION
+$("positionForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  showMessage("position", "");
+
+  try {
+    const data = await postData("/positions", {
+      name: $("positionName").value.trim(),
+      sortOrder: Number($("positionOrder").value)
+    });
+
+    showMessage("position", data.message || "Position created successfully.", true);
+    $("positionForm").reset();
+    $("positionOrder").value = "1";
+  } catch (error) {
+    showMessage("position", error.message);
+  }
+});
+
+// ADD CANDIDATE
+$("candidateForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  showMessage("candidate", "");
+
+  try {
+    const data = await postData("/candidates", {
+      name: $("candidateName").value.trim(),
+      partyId: Number($("candidateParty").value),
+      positionId: Number($("candidatePosition").value)
+    });
+
+    showMessage("candidate", data.message || "Candidate created successfully.", true);
+    $("candidateForm").reset();
+  } catch (error) {
+    showMessage("candidate", error.message);
+  }
+});
+
+$("refreshBtn").addEventListener("click", loadResults);
+
+// SAFE TEXT HELPER
+function addText(parent, tag, value, className) {
+  const element = document.createElement(tag);
+  element.textContent = value ?? "";
+  if (className) element.className = className;
+  parent.appendChild(element);
+  return element;
+}
+
+// GET RESULTS FROM YOUR EXACT ROUTE
+
+async function loadResults() {
+  const refreshBtn = document.getElementById("refreshBtn");
+  const resultsEl = document.getElementById("results");
+
+  refreshBtn.disabled = true;
+  document.getElementById("resultStatus").textContent = "Loading...";
+
+  try {
+    const response = await fetch(`${API_BASE}/admin/results`, {
+      headers: adminHeaders()
+    });
+
+    const rawText = await response.text();
+    console.log("Admin results HTTP status:", response.status);
+    console.log("Admin results raw response:", rawText);
+
+    let data;
+
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      throw new Error("The backend did not return valid JSON. Check the Network response.");
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Request failed with status ${response.status}`
+      );
+    }
+
+    console.log("Parsed admin results:", data);
+
+    // Match the response from your getResults controller.
+    const results = data.results;
+
+    if (!Array.isArray(results)) {
+      throw new Error(
+        "Expected { results: [...] }, but received a different response. Check the console."
+      );
+    }
+
+    renderResults(results);
+
+    document.getElementById("resultStatus").textContent =
+      `${results.length} positions loaded`;
+
+    document.getElementById("status").textContent =
+      "Updated: " + new Date().toLocaleString();
+
+  } catch (error) {
+    console.error("Failed to load admin results:", error);
+
+    resultsEl.replaceChildren();
+
+    const message = document.createElement("div");
+    message.className = "empty";
+    message.textContent = error.message;
+    resultsEl.appendChild(message);
+
+    document.getElementById("resultStatus").textContent = "Failed";
+  } finally {
+    refreshBtn.disabled = false;
+  }
+}
+
+
+// RENDER YOUR CONTROLLER'S RESPONSE FORMAT
+function renderResults(results) {
+  $("results").replaceChildren();
+
+  let totalVotes = 0;
+  let totalCandidates = 0;
+
+  if (!results.length) {
+    addText($("results"), "div", "No election results available yet.", "empty");
+  }
+
+  results.forEach(position => {
+    const candidates = position.candidates || [];
+    totalCandidates += candidates.length;
+
+    const positionVotes = candidates.reduce(
+      (sum, candidate) => sum + Number(candidate.votes || 0), 0
+    );
+
+    totalVotes += positionVotes;
+
+    const card = document.createElement("article");
+    card.className = "panel";
+
+    addText(card, "h3", position.position || "Untitled position", "position-title");
+
+    if (!candidates.length) {
+      addText(card, "p", "No candidates found.", "muted");
+    }
+
+    [...candidates]
+      .sort((a, b) => Number(b.votes || 0) - Number(a.votes || 0))
+      .forEach(candidate => {
+        const votes = Number(candidate.votes || 0);
+        const percentage = positionVotes ? votes / positionVotes * 100 : 0;
+
+        const row = document.createElement("div");
+        row.className = "candidate";
+
+        const top = document.createElement("div");
+        top.className = "candidate-top";
+
+        const left = document.createElement("div");
+        addText(left, "strong", candidate.name || "Unnamed candidate");
+        addText(left, "div", candidate.party || "Unknown party", "party-name");
+
+        const right = document.createElement("div");
+        right.style.textAlign = "right";
+        addText(right, "strong", `${votes} votes`);
+        addText(right, "div", `${percentage.toFixed(1)}%`, "party-name");
+
+        top.append(left, right);
+
+        const bar = document.createElement("div");
+        bar.className = "bar";
+
+        const fill = document.createElement("div");
+        fill.className = "fill";
+        fill.style.width = `${percentage}%`;
+        fill.style.background = candidate.color ||
+          partyColors[candidate.party] || "#8b5cf6";
+
+        bar.appendChild(fill);
+        row.append(top, bar);
+        card.appendChild(row);
+      });
+
+    $("results").appendChild(card);
+  });
+
+  $("totalVotes").textContent = totalVotes.toLocaleString();
+  $("totalPositions").textContent = results.length;
+  $("totalCandidates").textContent = totalCandidates;
+}
+</script>
+</body>
+</html>
